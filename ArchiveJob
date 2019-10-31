@@ -1,6 +1,13 @@
-Archival_Path = 'commercial/archival'
-Source_Path = 'commercial/dev'
-Job_Name = 'master'
+properties([
+    parameters([
+        string(defaultValue: '', description: 'ex: commercial-it-devops/apps/dev-ci-cd', name:'JobPath'),
+        string(defaultValue: '', description: 'ex: master-pipeline', name:'JobName'),
+        string(defaultValue: '', description: 'ex: commercial-it-devops/apps/archival', name:'ArchivalPath')
+        ])
+    ])
+Archival_Path = "${params.ArchivalPath}"
+Source_Path = "${params.JobPath}"
+Job_Name = "${JobName}"
 node {
     stage('Move') {
     def jenkins = Jenkins.instance
