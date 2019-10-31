@@ -1,0 +1,43 @@
+Archival_Path = 'commercial/archival'
+Source_Path = 'commercial/dev'
+Job_Name = 'master'
+node {
+    stage('Move') {
+    def jenkins = Jenkins.instance
+    def folder = jenkins.getItemByFullName(Archival_Path)
+    if (folder == null) {
+      println "ERROR: Folder '$Archival_Path' not found"
+    }
+    else {
+        println "Folder found $folder"
+        }
+    // Get the all Jobs
+    jenkins.getAllItems().findAll { it.name == "${Job_Name}" }.each { job ->
+       if (job.fullName == "$Archival_Path/$Job_Name") {
+          println "Job is already there in the same folder"  
+      } else if (job.fullName == "$Source_Path/$Job_Name") {
+          println "Moving '$job.name' to '$folder.name'"
+          Items.move(job, folder)
+      } 
+ 
+      }
+    }
+  
+    stage('Rename&Disable') {
+    def rename = sh (
+        script: 'date +%F-%H:%M',
+        returnStdout: true
+        ).trim()
+    println "value of the rename ${rename}"
+    def jenkins = Jenkins.instance
+    // Get the all Jobs
+    jenkins.getAllItems().findAll { it.name == "${Job_Name}" }.each { job ->
+          if (job.fullName == "$Archival_Path/$Job_Name") {
+          println "Disbale and Rename the Job"
+          job.setDisabled(true)
+          job.renameTo("${Job_Name}"+"-"+"${rename}")
+      } 
+   
+    }
+  }
+}
