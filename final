@@ -1,0 +1,163 @@
+
+Archival_Path="${Archival_Path}"
+Source_Path="${Source_Path}"
+Job_Name="${Job_Name}"
+node
+{
+stage('Copy') {
+    def log = "$Source_Path"
+    def folderName = log.substring(log.lastIndexOf("/") + 1, log.length())
+    println "$folderName"
+    def Archival_Path_folder=Archival_Path+"/"+folderName
+    println ("$Archival_Path_folder = merged")
+    def jenkins = Jenkins.instance
+    def folder = jenkins.getItemByFullName(Archival_Path)
+    if (folder == null) {
+      println "ERROR: Folder '$Archival_Path' not found"
+    }
+    else {
+        println "Folder found $folder"
+        }
+    // Get the all Folders
+    jenkins.getAllItems().findAll { it.fullName == "${Source_Path}" }.each { folder1 ->
+    println("$folder1.fullName")
+    if (folder1.fullName == "$Archival_Path_folder") {
+        println "folder is already there in the same folder"
+        } else{
+            println "Moving '$folder1.name' to '$folder.name'"
+            Items.move(folder1, folder)
+            }
+        }
+}
+}
+
+-abov copy
+
+--disable
+Archival_Path="${Archival_Path}"
+Source_Path="${Source_Path}"
+Job_Name="${Job_Name}"
+node
+{
+    stage('Disable') {
+        def log = "$Source_Path"
+    def folderName = log.substring(log.lastIndexOf("/") + 1, log.length())
+    println "$folderName"
+    def Archival_Path_folder=Archival_Path+"/"+folderName
+    println ("$Archival_Path_folder = merged")
+     def jenkins = Jenkins.instance
+     def jobs =  jenkins.getItemByFullName(Archival_Path).getAllJobs()
+     jobs.each {
+   println "Disabled: ${it.isDisabled()}"
+  it.setDisabled(true)
+  println "Disabled: ${it.isDisabled()}"
+
+}
+  }
+}
+
+--rename
+Archival_Path="${Archival_Path}"
+Source_Path="${Source_Path}"
+Job_Name="${Job_Name}"
+node
+{
+stage('Rename_Job') {
+   def rename = sh (
+        script: 'date +%F-%H:%M',
+        returnStdout: true
+        ).trim()
+    println "value of the rename ${rename}"
+    def log = "$Source_Path"
+    def folderName = log.substring(log.lastIndexOf("/") + 1, log.length())
+    println "$folderName"
+    def Archival_Path_folder=Archival_Path+"/"+folderName
+    println ("$Archival_Path_folder = merged")
+    def jenkins = Jenkins.instance
+    def folder = jenkins.getItemByFullName(Archival_Path)
+    if (folder == null) {
+      println "ERROR: Folder '$Archival_Path' not found"
+    }
+    else {
+        println "Folder found $folder"
+        }
+    // Get the all Folders
+    jenkins.getAllItems().findAll { it.fullName == "${Archival_Path_folder}" }.each { folder1 ->
+    println("$folder1.fullName")
+    if (folder1.fullName == "$Archival_Path_folder") {
+            println "Rename to '$folder1.name' to '$folder.name'"
+            folder1.renameTo(folderName+"-"+rename)
+            }
+        }
+}
+}
+
+--reset job
+Source_Path="${Source_Path}"
+Job_Name="${Job_Name}"
+buildRange = "1-5000"
+node
+{
+stage('Reset Build Version')
+  {
+  try
+  {
+ def FullPath =  Source_Path+"/"+Job_Name
+ println "Target job to reset build number : $FullPath"
+ def j = jenkins.model.Jenkins.instance.getItemByFullName(FullPath);
+def r = hudson.model.Fingerprint.RangeSet.fromString(buildRange, true);
+j.getBuilds(r).each { it.delete() }
+j.nextBuildNumber=1
+j.save()
+}
+ catch(Exception e)
+ {
+ println "Error at reset the build couter $e"
+ }
+ }
+}
+
+--master pipeline
+Archival_Path="${Archival_Path}"
+Source_Path="${Source_Path}"
+Job_Name="${Job_Name}"
+node 
+{
+stage("copy Job")
+{
+    println("Started")
+        build job: 'Copy_Job', 
+        parameters: [[$class: 'StringParameterValue', name: 'Archival_Path', value: Archival_Path],
+							[$class:  'StringParameterValue', name: 'Source_Path', value: Source_Path],
+							[$class: 'StringParameterValue', name: 'Job_Name', value: Job_Name]];
+							println("end 2")
+}
+stage("Disable Job")
+{
+    println("Started")
+        build job: 'Disable_Job', 
+      parameters: [[$class: 'StringParameterValue', name: 'Archival_Path', value: Archival_Path],
+							[$class:  'StringParameterValue', name: 'Source_Path', value: Source_Path],
+							[$class: 'StringParameterValue', name: 'Job_Name', value: Job_Name]];
+							println("end 2")
+}
+stage("Rename Job")
+{
+    println("Started")
+        build job: 'Rename_Job', 
+      parameters: [[$class: 'StringParameterValue', name: 'Archival_Path', value: Archival_Path],
+							[$class:  'StringParameterValue', name: 'Source_Path', value: Source_Path],
+							[$class: 'StringParameterValue', name: 'Job_Name', value: Job_Name]];
+							println("end 2")
+}
+stage("Reset Build Version")
+{
+    println("Started")
+        build job: 'Reset_Job', 
+      parameters: [			[$class:  'StringParameterValue', name: 'Source_Path', value: Source_Path],
+							[$class: 'StringParameterValue', name: 'Job_Name', value: Job_Name]];
+							println("end 2")
+}
+}
+
+
