@@ -1,0 +1,42 @@
+Archival_Path="${Archival_Path}"
+Source_Path="${Source_Path}"
+node
+{
+ stage("Copy Folder")
+{
+    try
+        {
+        if (Archival_Path != "" && Source_Path != "")
+        {
+def log = "$Source_Path"
+def folderName = log.substring(log.lastIndexOf("/") + 1, log.length())
+def srcShortPath = log.substring(0, log.lastIndexOf("/"))
+println "$folderName - $srcShortPath"
+  def jenkins = Jenkins.instance
+  def target = jenkins.getItemByFullName(Archival_Path)
+  def source = jenkins.getItemByFullName(Source_Path)
+  def directory =  jenkins.getItemByFullName(srcShortPath)
+  directory.each{
+    println("$it.name - $it.fullName")
+    @NonCPS
+    result=it.copy(source,"${BUILD_ID}")
+    Items.move(source,target)
+    result.renameTo("$folderName")
+    def jobs =  jenkins.getItemByFullName(Source_Path).getAllJobs()
+    jobs.each {
+      it.save()
+       
+     }
+  }
+        }else
+        {
+            println "In-Sufficient Input"
+        }
+        }
+        catch (Exception e)
+        {
+            println "Error at copy all jobs $e"
+        }
+        
+  }
+  }
